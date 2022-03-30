@@ -1,0 +1,111 @@
+<img id="Invader" src="Images/Why.png" style="display: none;">
+<img id="Saviour" src="Images/Saviour.png" style="display: none;">
+<canvas id="canvas" width="500" height="600"></canvas>
+<script>
+var interval
+var ctx = document.getElementById("canvas").getContext("2d")
+
+//Core functions of the game. Objects used to identify some crucial aspects like movement and sprites.
+function GameObject(x, y, img) {
+    this.x = x; this.y = y; this.img = img; this.active = true
+}
+GameObject.prototype.draw = function(ctx) {
+    this.active && ctx.drawImage(this.img, this.x, this.y, 40, 40)
+}
+GameObject.prototype.move = function(dx, dy) {
+    //Variables/Objects (dx and dy) that are used in order for main functions to work, like shooting.
+    this.x += dx; this.y += dy
+}
+GameObject.prototype.fire = function(dy) {
+    return new Shot(this.x+20, this.y+20, dy)
+}
+GameObject.prototype.isHitBy = function(Shot) {
+    function between(x, a, b) { return a < x && x < b}
+    return this.active && between(shot.x, this.x+40) && between(shot.y+10, this.y, this.y+20)
+}
+
+//Functions and properties of the shooting bullet. It's functions, movement, color, etc.
+function Shot(x, y, dy) {
+    this.x = x; this.y = y; this.dy = dy;
+}
+Shot.prototype.move = function() {
+    this.y += this.dy
+    return this.y > 0 && this.y < 600
+}
+Shot.prototype.draw = function() {
+    ctx.fillStyle = '#ffde00'
+    ctx.fillRect(this.x-1, this.y, 3, 20)
+}
+
+//Variables used to identify the invaders (NFT) and our saviour (Bob ross the ship). 
+var InvaderDx = -5
+var Invaders = []
+var Saviour = new GameObject(230, 550, document.getElementById("Saviour"))
+var InvaderShot, SaviourShot
+
+//The invaders' main function. How they will be moving as an example. 
+function unit() {
+    var img = document.getElementById("Invader")
+    for (var y = 0; y < 3; y++) {
+        for (var x = 0; x < 8; x++) {
+            Invaders.push(new GameObject(50+x*50, 20+y*50, img))
+        }
+    }
+}
+//Normally the sprites, but in this case it's the images. It's color, box, pixels, etc.
+function draw() {
+    ctx.fillStyle = '#6b7996'
+    ctx.fillRect(0, 0, 500, 600)
+    Invaders.forEach(inv => inv.draw(ctx))
+    Saviour.draw(ctx)
+    InvaderShot && InvaderShot.draw(ctx)
+    SaviourShot && SaviourShot.draw(ctx)
+}
+//How you can move and how fast.
+function move() {
+    //How the invaders will be moving downwards. 
+    var leftX = Invaders[0].x, rightX = Invaders[Invaders.length-1].x
+    if (leftX <= 20 || rightX >= 440) InvaderDx = -InvaderDx
+    Invaders.forEach(inv => inv.move(InvaderDx, 0.5))
+    if (InvaderShot && !InvaderShot.move()) {
+        InvaderShot = null
+    }
+    //How active and random the invaders are gonna shoot.
+    if (!InvaderShot) {
+        var active = Invaders.filter(i => i.active)
+        var r = active[Math.floor(Math.random()*active.length)]
+        InvaderShot = r.fire(20)
+    }
+    //How the Saviour (ship) will be shooting its bullet, alongside how it will act if it gets hit by invaders' lazer.
+    if (SaviourShot) {
+        var hit = Invaders.find(inv => inv.isHitBy(SaviourShot))
+        if (hit) {  
+            hit.active = false
+            SaviourShot = null
+
+        } else {  
+            if (!SaviourShot.move()) SaviourShot = null
+        }
+    }
+}
+
+//A function around movement (NOT USED).
+function game() {
+    move()
+    draw()
+}
+
+//How the game will start. The other functions above won't show unless it's added to the start function.
+function start() {
+    unit()
+    document.addEventListener("keydown", function(e){
+        //How the ship will move based off the position of our saviour. He basically can't move too much to the left or right.
+        if (e.keyCode == 37 && Saviour.x > 40) Saviour.move(-30, 0)
+        if (e.keyCode == 39 && Saviour.x < 420) Saviour.move(30, 0)
+        if (e.keyCode == 32 && !SaviourShot) SaviourShot = Saviour.fire(-30)
+    })
+    interval = setInterval(game, 50)
+}
+
+window.onload = start
+</script>
